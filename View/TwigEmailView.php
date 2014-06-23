@@ -49,7 +49,7 @@ require_once($twigPath . 'Lib' . DS . 'CoreExtension.php');
  * @package app.views
  * @subpackage app.views.twig
  */
-class TwigView extends View {
+class TwigEmailView extends View {
 
 /**
  * File extension
@@ -81,18 +81,8 @@ class TwigView extends View {
  * @param Controller $Controller Controller
  */
 	public function __construct(Controller $Controller = null) {
-		$this->templatePaths = App::path('View');
-		$this->templatePaths = array_merge($this->templatePaths, App::path('Plugin'));
-		// This is a hack, because we broke Cakes Paths
-		// @todo need to stop breaking cakes paths
-		$count = count($this->templatePaths);
-		for ($i = 0 ; $i < $count ; $i++ ) {
-			if(!file_exists ($this->templatePaths[$i])) {
-				unset($this->templatePaths[$i]);
-			}
-		}
 		
-		$loader = new Twig_Loader_Filesystem($this->templatePaths);
+		$loader = new Twig_Loader_String();
 		$this->Twig = new Twig_Environment($loader, array(
 			'cache' => TWIG_VIEW_CACHE,
 			'charset' => strtolower(Configure::read('App.encoding')),
@@ -121,15 +111,9 @@ class TwigView extends View {
  * @param string $_dataForView 
  * @return void
  */
-	protected function _render($_viewFn, $_dataForView = array()) {
-		$isCtpFile = (substr($_viewFn, -3) === 'ctp');
-		
+	protected function _render($string, $_dataForView = array()) {
 		if (empty($_dataForView)) {
 			$_dataForView = $this->viewVars;
-		}
-				
-		if ($isCtpFile) {
-			return parent::_render($_viewFn, $_dataForView);
 		}
 
 		ob_start();
@@ -146,17 +130,11 @@ class TwigView extends View {
 		}
 		$data = array_merge($_dataForView, $helpers);	
 		$data['_view'] = $this;
-		$relativeFn = str_replace($this->templatePaths, '', $_viewFn);
-		$template = $this->Twig->loadTemplate($relativeFn);
-		echo $template->render($data);
+		echo $this->Twig->render($htmlString, $data);
 		return ob_get_clean();
 	}
 	
-	public function renderHtml($viewFn = null, $dataForView = array()) {
-		if($viewFn === null) {
-			$viewFn = $this->view;
-		}
-		$viewFn = $viewFn.$this->ext;
-		return $this->_render($viewFn, $dataForView);
+	public function renderHtml($htmlString = '', $dataForView = array()) {
+		return $this->_render($htmlString, $dataForView);
 	}
 }
