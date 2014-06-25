@@ -182,7 +182,7 @@ class TwigEmailView extends View {
 		}
 	
 		if ($isFile) {
-			return $this->renderHtml($_viewFn, $_dataForView);
+			return $this->renderHtml($htmlString, $_dataForView);
 		}
 		
 		ob_start();
