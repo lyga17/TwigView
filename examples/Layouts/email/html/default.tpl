@@ -1,10 +1,15 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
 <html>
 <head>
-	<title>{{ title_for_layout }}</title>
+	<title>{% block title %}Index{% endblock %}</title>
 </head>
 <body>
-	{{ content_for_layout }}
+	{% block content %}
+	    <h1>Index</h1>
+	    <p class="important">
+	        Welcome! {{user.User.username}}
+	    </p>
+	{% endblock %}
 
 	<p>This email was sent using the <a href="http://cakephp.org">CakePHP Framework</a></p>
 </body>

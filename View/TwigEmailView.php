@@ -1,4 +1,5 @@
 <?php
+use Aws\CloudFront\Exception\Exception;
 /**
  * TwigView for CakePHP
  *
@@ -65,6 +66,8 @@ class TwigEmailView extends View {
  */
 	public $Twig;
 	
+	public $TwigString;
+	
 /**
  * Collection of paths. 
  * These are stripped from $___viewFn.
@@ -82,7 +85,13 @@ class TwigEmailView extends View {
  */
 	public function __construct(Controller $Controller = null) {
 		
-		$loader = new Twig_Loader_String();
+		$this->templatePaths = array(
+				ROOT.DS.APP_DIR.DS."Plugin".DS."Notifications".DS."View".DS."Emails"
+		);
+		$loader = new Twig_Loader_Filesystem($this->templatePaths);
+		
+		$stringloader = new Twig_Loader_String();
+		
 		$this->Twig = new Twig_Environment($loader, array(
 			'cache' => TWIG_VIEW_CACHE,
 			'charset' => strtolower(Configure::read('App.encoding')),
@@ -91,11 +100,25 @@ class TwigEmailView extends View {
 			'debug' => Configure::read('debug') > 0
 		));;
 		
+		$this->TwigString = new Twig_Environment($stringloader, array(
+				'cache' => TWIG_VIEW_CACHE,
+				'charset' => strtolower(Configure::read('App.encoding')),
+				'auto_reload' => Configure::read('debug') > 0,
+				'autoescape' => false,
+				'debug' => Configure::read('debug') > 0
+		));;
+		
 		$this->Twig->addExtension(new CoreExtension);
 		$this->Twig->addExtension(new Twig_Extension_I18n);
 		$this->Twig->addExtension(new Twig_Extension_Ago);
 		$this->Twig->addExtension(new Twig_Extension_Basic);
 		$this->Twig->addExtension(new Twig_Extension_Number);
+		
+		$this->TwigString->addExtension(new CoreExtension);
+		$this->TwigString->addExtension(new Twig_Extension_I18n);
+		$this->TwigString->addExtension(new Twig_Extension_Ago);
+		$this->TwigString->addExtension(new Twig_Extension_Basic);
+		$this->TwigString->addExtension(new Twig_Extension_Number);
 		
 		parent::__construct($Controller);
 		
@@ -111,11 +134,57 @@ class TwigEmailView extends View {
  * @param string $_dataForView 
  * @return void
  */
-	protected function _render($string, $_dataForView = array()) {
+	protected function _render($_viewFn, $_dataForView = array()) {
+		$isCtpFile = (substr($_viewFn, -3) === 'ctp');
+		
 		if (empty($_dataForView)) {
 			$_dataForView = $this->viewVars;
 		}
-
+				
+		if ($isCtpFile) {
+			return parent::_render($_viewFn, $_dataForView);
+		}
+		$this->layout = $this->layout.$this->ext;
+		ob_start();
+			// Setup the helpers from the new Helper Collection
+			$helpers = array();
+			$loaded_helpers = $this->Helpers->attached();
+			foreach($loaded_helpers as $helper) {
+				$name = Inflector::variable($helper);
+				$helpers[$name] = $this->loadHelper($helper);
+			}
+	
+			if (!isset($_dataForView['cakeDebug'])) {
+				$_dataForView['cakeDebug'] = null;
+			}
+			$data = array_merge($_dataForView, $helpers);	
+			$data['_view'] = $this;
+			$relativeFn = str_replace($this->templatePaths, '', $_viewFn);
+			$template = $this->Twig->loadTemplate($relativeFn);
+			echo $template->render($data);
+		return ob_get_clean();
+	}
+	
+	public function renderHtml($viewFn = null, $dataForView = array()) {
+		if($viewFn === null) {
+			$viewFn = $this->view;
+		}
+		$viewFn = $viewFn.$this->ext;
+		return $this->_render($viewFn, $dataForView);
+	}
+	
+	
+	protected function _renderString($htmlString, $_dataForView = array()) {
+		$isFile = (substr($htmlString, -4) === '.');
+	
+		if (empty($_dataForView)) {
+			$_dataForView = $this->viewVars;
+		}
+	
+		if ($isFile) {
+			return $this->renderHtml($_viewFn, $_dataForView);
+		}
+		
 		ob_start();
 		// Setup the helpers from the new Helper Collection
 		$helpers = array();
@@ -124,17 +193,18 @@ class TwigEmailView extends View {
 			$name = Inflector::variable($helper);
 			$helpers[$name] = $this->loadHelper($helper);
 		}
-
 		if (!isset($_dataForView['cakeDebug'])) {
 			$_dataForView['cakeDebug'] = null;
 		}
-		$data = array_merge($_dataForView, $helpers);	
+		$data = array_merge($_dataForView, $helpers);
 		$data['_view'] = $this;
-		echo $this->Twig->render($htmlString, $data);
+		echo $this->TwigString->render($htmlString, $data);
 		return ob_get_clean();
 	}
 	
-	public function renderHtml($htmlString = '', $dataForView = array()) {
-		return $this->_render($htmlString, $dataForView);
+	public function renderString($htmlString = null, $dataForView = array()) {
+		return $this->_renderString($htmlString, $dataForView);
 	}
+	
+	
 }
