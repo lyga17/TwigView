@@ -1,4 +1,4 @@
-# TwigView plugin for CakePHP #
+# Zuha TwigView plugin for CakePHP #
 
 This plugin for the [CakePHP Framework](http://cakephp.org) allows you to use the [Twig Templating Language](http://twig.sensiolabs.org) for your views.
 
